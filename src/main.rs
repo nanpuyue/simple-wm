@@ -2,7 +2,7 @@ use std::cmp::max;
 use std::collections::HashMap;
 use std::default::Default;
 use std::ffi::CString;
-use std::mem::MaybeUninit;
+use std::mem::{forget, MaybeUninit};
 use std::os::raw::{c_int, c_uint, c_ulong, c_void};
 use std::ptr::{null, null_mut};
 
@@ -69,11 +69,12 @@ impl WindowManager {
             MAX_ERROR_TEXT_LENGTH as c_int,
         );
         eprintln!(
-            "{}",
+            "X error: {}",
             CString::from_raw(error_text.as_mut_ptr())
                 .to_str()
                 .unwrap_or("`CString::to_str()` error!")
         );
+        forget(error_text);
         0
     }
 
@@ -153,7 +154,7 @@ impl WindowManager {
             GrabModeAsync,
             GrabModeAsync,
         );
-        eprintln!("Framed window: {}", w);
+        eprintln!("Framed window: {} [{}]", w, frame);
     }
 
     unsafe fn unframe(&mut self, w: Window) {
@@ -167,6 +168,7 @@ impl WindowManager {
         XRemoveFromSaveSet(self.display, w);
         XDestroyWindow(self.display, frame);
         self.clients.remove(&w);
+        eprintln!("Unframed window: {}", w);
     }
 
     unsafe fn map_request(&mut self, e: &XMapRequestEvent) {
@@ -180,7 +182,6 @@ impl WindowManager {
         }
 
         self.unframe(e.window);
-        eprintln!("Unframed window: {}", e.window);
     }
 
     unsafe fn configure_request(&self, e: &XConfigureRequestEvent) {
